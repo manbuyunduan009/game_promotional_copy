@@ -118,7 +118,7 @@
 ## 换电脑迁移建议
 迁移时至少带走以下内容：
 
-- 整个 accounting-app 文件夹
+- 整个 AIP 文件夹
 - 本文件 PROJECT_CONTEXT.md
 - HANDOFF_PROMPT.md
 

@@ -1,102 +1,62 @@
-﻿# Handoff Prompt
+# Handoff Prompt
 
-你正在继续协作的项目是一个“经营沙盘 Demo”。
+你正在继续协作的项目是「AI游戏文案」。
 
-## 项目目的
-这是一个给领导汇报用的 Demo，目标不是做完整系统，而是做一个“理想但现在可以演示”的版本，让领导看出这套经营沙盘有价值，并愿意继续投资源。
+## 产品定位
 
-## 核心产品逻辑
-整个产品围绕三大模块：
+这是一个游戏 AI 营销文案生成 SaaS 平台，面向手游、端游、独立游戏、小游戏运营、开发者、发行商。
 
-- 业务经营 = 结果
-- 运营动作 = 动作
-- 技术支撑 = 支撑
+## 当前版本
 
-三者共同构成完整的价值评估闭环。
+当前版本是 React + Vite + TypeScript 前端原型，已经完成多页面可演示闭环，并接入 Supabase Auth：
 
-## 分析结构
-所有模块内部统一使用三级指标：
+- 官网落地页
+- 登录页
+- 注册页
+- 用户控制台
+- 付费订阅页
+- 管理后台
 
-- 一级指标：看整体结果
-- 二级指标：看结构强弱
-- 三级指标：看原因解释
+## 核心页面
 
-设计原则：
+重点页面是 `/dashboard`：
 
-- 一级稳定
-- 二级按业务阶段适配
-- 三级用于解释和归因
+- 左侧：游戏信息表单，包括游戏类型、题材、平台、风格、文案用途、目标玩家、核心卖点、活动/版本信息
+- 右侧：AI 生成结果，多版本展示、一键复制、保存模板
 
-## 当前 Demo 的定位
-当前 Demo 是“理想演示版”，主要目的是让管理层看懂：
+## 架构约定
 
-1. 这套东西为什么有价值
-2. 为什么现在值得开始做
-3. 为什么未来值得继续投资源
+- UI 组件库固定使用 shadcn/ui 风格组件
+- 图标使用 lucide-react
+- Supabase client 在 `src/lib/supabase.ts`
+- 登录状态在 `src/lib/auth-context.tsx`
+- 私有路由守卫在 `src/components/RequireAuth.tsx`
+- 前端业务 API 调用集中在 `src/lib/api.ts`
+- 后端 API 在 `server/index.ts`
+- 类型集中在 `src/types.ts`
+- `profiles` 表 SQL 在 `supabase/profiles.sql`
+- `generations` 表 SQL 在 `supabase/generations.sql`
 
-因此请不要把当前页面改造成“真实后台系统”或“传统 BI 报表堆砌页面”。
+## Supabase 配置提醒
 
-## 当前页面应该传达的感觉
-- 更像管理层经营驾驶舱 / 汇报型产品 Demo
-- 不是普通后台管理页
-- 不是纯静态 PPT
-- 要有产品感、经营感、价值感
+`.env.local` 必须由开发者手动创建，填入：
 
-## 当前已经实现的内容
-当前项目已经做了：
-
-- 首页总览
-- 一级/二级/三级指标说明
-- 业务阶段切换
-- 三大模块切换
-- 当前版本定位说明
-- 未来 AI 化演进区块
-
-## AI 化表达逻辑
-未来 AI 化方向是：
-
-- Data Flow -> AI Flow -> Workflow
-
-含义是：
-
-- Data Flow：先把项目、阶段、动作、支撑、投入、产出连起来
-- AI Flow：做解释、预判、预警和资源建议
-- Workflow：把建议送进复盘、跟进和协同闭环
-
-借鉴了 AIP / Ontology 的方法论，但不是照搬重平台形态。
-
-## 当前实现文件
-主要关注：
-
-- src/App.tsx
-- src/App.css
-- src/index.css
-
-## 后续优化方向
-如果继续迭代，优先考虑这些方向：
-
-1. 增强首页总览，让领导打开第一眼就看到“是否达标、是否该加投”
-2. 增加一个真实项目案例穿透页
-3. 增加更强的数据图表表达
-4. 让 AI 部分更像“经营决策助手”而不是说明文字
-5. 逐步替换部分假数据为真实业务案例
-
-## 风格要求
-- 用简单直白但专业的语言
-- 保持经营汇报感
-- 不要为了炫技引入过重架构
-- 不要把页面做成千篇一律的管理后台
-- 要始终围绕“为什么值得投资源”这个中心问题
-
-## 启动方式
 ```bash
-npm install
-npm run build
-npm run dev
+VITE_SUPABASE_URL=your-project-url
+VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-or-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-for-local-api-only
+OPENAI_API_KEY=your-openai-api-key
+OPENAI_BASE_URL=https://api.andanzhiguang.uk/v1
+OPENAI_MODEL=gpt-4.1-mini
 ```
 
-如果本地 dev 有权限问题，也可以先用：
+不要把 service_role key 放进前端。
+
+## 本地命令
 
 ```bash
-npm run preview
+npm install
+npm run dev
+npm run build
+npm run lint
 ```

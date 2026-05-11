@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { AuthContext, type AuthContextValue } from '@/lib/auth'
@@ -10,7 +10,7 @@ async function loadProfile(userId: string): Promise<Profile | null> {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id,email,role,plan')
+    .select('id,email,role,plan,payment_status')
     .eq('id', userId)
     .maybeSingle()
 
@@ -25,6 +25,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+
+  const refreshProfile = useCallback(async () => {
+    if (!session?.user) {
+      setProfile(null)
+      return
+    }
+
+    setProfile(await loadProfile(session.user.id))
+  }, [session])
 
   useEffect(() => {
     let mounted = true
@@ -91,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       user: session?.user ?? null,
       profile,
+      refreshProfile,
       async signIn(email, password) {
         if (!supabase) {
           throw new Error('Supabase 尚未配置。请先创建 .env.local 并填写 VITE_SUPABASE_URL 和 VITE_SUPABASE_PUBLISHABLE_KEY。')
@@ -121,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error) throw error
       },
     }),
-    [loading, profile, session],
+    [loading, profile, refreshProfile, session],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

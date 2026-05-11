@@ -8,6 +8,7 @@ export type AuthContextValue = {
   session: Session | null
   user: SupabaseUser | null
   profile: Profile | null
+  refreshProfile: () => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, metadata?: Record<string, string>) => Promise<boolean>
   signOut: () => Promise<void>

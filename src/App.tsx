@@ -40,11 +40,7 @@ function App() {
           />
           <Route
             path="/billing"
-            element={
-              <RequireAuth>
-                <BillingPage />
-              </RequireAuth>
-            }
+            element={<BillingPage />}
           />
           <Route
             path="/admin"

@@ -83,6 +83,21 @@ export type GenerateMarketingCopyResult = {
   quota?: GenerationQuota
 }
 
+export type Subscription = {
+  id: string
+  user_id: string
+  stripe_customer_id: string | null
+  stripe_subscription_id: string | null
+  stripe_checkout_session_id: string | null
+  stripe_price_id: string | null
+  plan: Plan
+  status: string
+  current_period_start: string | null
+  current_period_end: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type CopyVariant = {
   id: string
   title: string

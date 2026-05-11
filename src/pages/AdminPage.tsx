@@ -1,15 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AdminLayout } from '@/components/AdminLayout'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { supabase } from '@/lib/supabase'
-import type { Generation, Plan, Profile } from '@/types'
-
-type AdminGenerationRecord = Generation & {
-  userEmail?: string
-}
+import { loadAdminOverview, type AdminGenerationRecord } from '@/lib/api'
+import type { Plan, Profile } from '@/types'
 
 const planLabel: Record<Plan, string> = {
   free: '免费版',
@@ -27,50 +25,21 @@ const paymentLabel: Record<string, string> = {
 export function AdminPage() {
   const [users, setUsers] = useState<Profile[]>([])
   const [records, setRecords] = useState<AdminGenerationRecord[]>([])
+  const [selectedRecord, setSelectedRecord] = useState<AdminGenerationRecord | null>(null)
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
     async function loadAdminData() {
-      if (!supabase) {
-        setErrorMessage('Supabase 尚未配置。')
-        setLoading(false)
-        return
-      }
-
       setLoading(true)
       setErrorMessage('')
 
-      const [profilesResult, generationsResult] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('id,email,role,plan,payment_status,created_at')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('generations')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(100),
-      ])
-
-      if (profilesResult.error) {
-        setErrorMessage(profilesResult.error.message)
-      } else {
-        setUsers((profilesResult.data || []) as Profile[])
-      }
-
-      if (generationsResult.error) {
-        setErrorMessage(generationsResult.error.message)
-      } else {
-        const profiles = (profilesResult.data || []) as Profile[]
-        const emailByUserId = new Map(profiles.map((profile) => [profile.id, profile.email]))
-        const generationRows = (generationsResult.data || []) as Generation[]
-        setRecords(
-          generationRows.map((record) => ({
-            ...record,
-            userEmail: emailByUserId.get(record.user_id),
-          })),
-        )
+      try {
+        const overview = await loadAdminOverview()
+        setUsers(overview.users)
+        setRecords(overview.records)
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : '后台数据加载失败。')
       }
 
       setLoading(false)
@@ -161,6 +130,7 @@ export function AdminPage() {
                         <TableHead>耗时</TableHead>
                         <TableHead>Token</TableHead>
                         <TableHead>创建时间</TableHead>
+                        <TableHead>操作</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -180,6 +150,11 @@ export function AdminPage() {
                           <TableCell>{record.latency_ms ? `${record.latency_ms}ms` : '-'}</TableCell>
                           <TableCell>{record.total_tokens ?? '-'}</TableCell>
                           <TableCell>{formatDate(record.created_at)}</TableCell>
+                          <TableCell>
+                            <Button variant="outline" size="sm" onClick={() => setSelectedRecord(record)}>
+                              查看
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -226,6 +201,7 @@ export function AdminPage() {
           </TabsContent>
         </Tabs>
       </div>
+      <GenerationDetailDialog record={selectedRecord} onOpenChange={(open) => (!open ? setSelectedRecord(null) : undefined)} />
     </AdminLayout>
   )
 }
@@ -250,4 +226,61 @@ function EmptyState({ text }: { text: string }) {
 function formatDate(value?: string) {
   if (!value) return '-'
   return new Date(value).toLocaleString()
+}
+
+function GenerationDetailDialog({ record, onOpenChange }: { record: AdminGenerationRecord | null; onOpenChange: (open: boolean) => void }) {
+  return (
+    <Dialog open={Boolean(record)} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[86vh] max-w-3xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>生成记录详情</DialogTitle>
+          <DialogDescription>查看本次生成的用户、输入、输出、耗时和 token 用量。</DialogDescription>
+        </DialogHeader>
+        {record ? (
+          <div className="space-y-5">
+            <div className="grid gap-3 rounded-lg border bg-muted/30 p-4 text-sm sm:grid-cols-2">
+              <DetailItem label="用户" value={record.userEmail || record.user_id} />
+              <DetailItem label="状态" value={record.status === 'success' ? '成功' : '失败'} />
+              <DetailItem label="产品名" value={record.product_name} />
+              <DetailItem label="渠道" value={record.publishing_channel} />
+              <DetailItem label="用途" value={record.purpose || '-'} />
+              <DetailItem label="模型" value={record.model} />
+              <DetailItem label="耗时" value={record.latency_ms ? `${record.latency_ms}ms` : '-'} />
+              <DetailItem label="Token" value={record.total_tokens === null ? '-' : String(record.total_tokens)} />
+              <DetailItem label="创建时间" value={formatDate(record.created_at)} />
+            </div>
+
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold">输入信息</h2>
+              <div className="grid gap-3 rounded-lg border p-4 text-sm">
+                <DetailItem label="产品描述" value={record.description} multiline />
+                <DetailItem label="目标受众" value={record.target_audience} />
+                <DetailItem label="核心卖点" value={record.selling_points} multiline />
+                <DetailItem label="游戏类型" value={record.game_type || '-'} />
+                <DetailItem label="题材" value={record.genre || '-'} />
+                <DetailItem label="风格" value={record.style || '-'} />
+                <DetailItem label="活动 / 版本信息" value={record.campaign_info || '-'} multiline />
+              </div>
+            </section>
+
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold">{record.status === 'success' ? '生成结果' : '失败原因'}</h2>
+              <pre className="whitespace-pre-wrap rounded-lg border bg-slate-50 p-4 text-sm leading-7">
+                {record.output || record.error_message || '没有可展示内容'}
+              </pre>
+            </section>
+          </div>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function DetailItem({ label, value, multiline = false }: { label: string; value: string; multiline?: boolean }) {
+  return (
+    <div className={multiline ? 'sm:col-span-2' : ''}>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="mt-1 break-words font-medium">{value}</div>
+    </div>
+  )
 }
